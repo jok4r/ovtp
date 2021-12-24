@@ -2,14 +2,14 @@ from overengine_client import OverEngineClient
 import signal
 import datetime
 import asyncio
-import sys
+import os
 
 
 def signal_handler(sig, frame):
     print("Pressed Ctrl+C, exiting...")
     # global script_run
     # script_run = False
-    sys.exit(0)
+    os.kill(os.getpid(), signal.SIGTERM)
 
 
 print("Running script on %s" % datetime.datetime.now())
