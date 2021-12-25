@@ -395,22 +395,3 @@ class OverEngineServer:
         # print(f'Serving on {self.get_sockets}')
         async with self.server:
             await self.server.serve_forever()
-
-
-def signal_handler(sig, frame):
-    print("Pressed Ctrl+C, exiting...")
-    exit(0)
-
-
-if __name__ == '__main__':
-    print("Running script %s" % datetime.datetime.now())
-    signal.signal(signal.SIGINT, signal_handler)
-    print('Press Ctrl+C for exit')
-    over_engine_server = OverEngineServer(verbose=False, debug=False)
-    main_mode = input('Select mode d, v, dv - debug, verbose: ')
-    if main_mode in ['d', 'v', 'dv']:
-        if main_mode in ['d', 'dv']:
-            over_engine_server.debug = True
-        if main_mode in ['v', 'dv']:
-            over_engine_server.verbose = True
-    asyncio.run(over_engine_server.run_server())
