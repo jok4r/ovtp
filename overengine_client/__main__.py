@@ -15,7 +15,8 @@ def signal_handler(sig, frame):
 print("Running script on %s" % datetime.datetime.now())
 signal.signal(signal.SIGINT, signal_handler)
 print('Press Ctrl+C for exit')
-oec = OverEngineClient(verbose=False, debug=False)
+server_ip = input('Server ip: ')
+oec = OverEngineClient(server_ip, verbose=False, debug=False)
 input_text = 'Select mode (m - message, df - download file, uf - upload file, vfs - verify file sign)'
 main_mode = input(input_text + ' or d, v, dv - debug, verbose: ')
 if main_mode in ['d', 'v', 'dv']:

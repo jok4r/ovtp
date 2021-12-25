@@ -12,25 +12,27 @@ import ovcfg
 
 script_run = True
 sc = {
-    'server_port': 888,
-    'server_address': '92.53.65.142',
+    'default_server_port': 888,
     'local_ip': '0.0.0.0'
 }
 cfg = ovcfg.Config(std_config=sc, file='client.json', cfg_dir_name='overengine').import_config()
-server_port = cfg['server_port']
-server_ip = cfg['server_address']
-local_ip = cfg['local_ip']
+# server_port = cfg['server_port']
+# server_ip = cfg['server_address']
+# local_ip = cfg['local_ip']
 
 
 class OverEngineClient:
-    def __init__(self, debug=False, verbose=False):
+    def __init__(self, server_ip, server_port=None, debug=False, verbose=False):
         self.cr = ovcrypt.OvCrypt()
         self.reader = None
         self.writer = None
         self.server_public_key = None
         self.encrypted_connection = False
         self.server_address = server_ip
-        self.server_port = server_port
+        if server_port:
+            self.server_port = server_port
+        else:
+            self.server_port = cfg['default_server_port']
         self.debug = debug
         self.verbose = verbose
         self.authorized = False
