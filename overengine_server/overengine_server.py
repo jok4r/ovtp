@@ -350,6 +350,7 @@ class OverEngineServer:
                     dec_data = oe_common.fix_block_encoding_errors(data)
                     if self.server.debug or self.server.verbose:
                         print('message:', dec_data)
+                    self.server.callback(True, dec_data)
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
@@ -375,8 +376,9 @@ class OverEngineServer:
                 if self.server.debug:
                     print(f'End of packet {address}')
 
-    def __init__(self, verbose=None, debug=None):
+    def __init__(self, callback, verbose=None, debug=None):
         self.server = None
+        self.callback = callback
         self.saved_keys = {}
         self.verbose = verbose
         self.debug = debug

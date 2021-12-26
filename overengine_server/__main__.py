@@ -10,10 +10,14 @@ def signal_handler(sig, frame):
     exit(0)
 
 
+def callback(status, response):
+    print(f'status: {status}, response: {response}')
+
+
 print("Running script %s" % datetime.datetime.now())
 signal.signal(signal.SIGINT, signal_handler)
 print('Press Ctrl+C for exit')
-over_engine_server = OverEngineServer(verbose=False, debug=False)
+over_engine_server = OverEngineServer(callback, verbose=False, debug=False)
 if len(sys.argv) > 1 and sys.argv[1] == '--daemon':
     print('Running in daemon mode')
 else:
