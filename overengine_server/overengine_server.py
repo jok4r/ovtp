@@ -47,8 +47,8 @@ class OverEngineServer:
 
         def check_key_is_master(self, key):
             auth_keys_path = os.path.join(cfg['auth_keys_dir'], 'authorized_keys')
-            # os.makedirs(auth_keys_path, exist_ok=True)
-            oe_common.check_create_dir(auth_keys_path)
+            os.makedirs(cfg['auth_keys_dir'], exist_ok=True)
+            # oe_common.check_create_dir(auth_keys_path)
             saved_master_keys = []
             if os.path.isfile(auth_keys_path):
                 with open(auth_keys_path, 'rb') as f:
