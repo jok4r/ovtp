@@ -1,3 +1,4 @@
+import json
 import os
 import rsa
 import signal
@@ -303,10 +304,10 @@ class OverEngineServer:
                                 if data_type != b'auth_resp':
                                     if ov_sign.get_verification_result(received_sign):
                                         # self.writer.write(aes.encrypt(b'File sign ok'))
-                                        await self.write_with_prefix(self.aes.encrypt(b'File sign ok'))
+                                        await self.write_with_prefix(self.aes.encrypt(b'Sign ok'))
                                     else:
                                         # self.writer.write(aes.encrypt(b'File sign error'))
-                                        await self.write_with_prefix(self.aes.encrypt(b'File sign error'))
+                                        await self.write_with_prefix(self.aes.encrypt(b'Sign error'))
                                 break
                         if data_type == b'file':
                             if filename[0] != '/':
@@ -351,7 +352,9 @@ class OverEngineServer:
                     dec_data = oe_common.fix_block_encoding_errors(data)
                     if self.server.debug or self.server.verbose:
                         print('message:', dec_data)
-                    self.server.callback(True, dec_data)
+                    status, description = self.server.callback(True, dec_data)
+                    d = json.dumps({'status': status, 'description': description}).encode()
+                    await self.write_with_prefix(self.aes.encrypt(d))
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
