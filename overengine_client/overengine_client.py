@@ -408,7 +408,7 @@ class OverEngineClient:
                 rcv_data = self.aes.decrypt(rcv_data)
                 if data_type == 'message' and rcv_data == b'Sign ok':
                     sign_data = rcv_data  # Xz why
-                    rcv_data = (await self.read_with_prefix())[0]
+                    rcv_data = self.aes.decrypt((await self.read_with_prefix())[0])
                 rcv_data = oe_common.fix_block_encoding_errors(rcv_data)
             else:
                 await self.close_connection()
