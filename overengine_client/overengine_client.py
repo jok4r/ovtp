@@ -405,10 +405,11 @@ class OverEngineClient:
         if data_type not in ['public_key', 'auth_req'] and self.server_public_key:
             # print(f'Decrypted: {aes.decrypt(rcv_data)}')
             if len(rcv_data) > 0:
-                rcv_data = oe_common.fix_block_encoding_errors(self.aes.decrypt(rcv_data))
+                rcv_data = self.aes.decrypt(rcv_data)
                 if data_type == 'message' and rcv_data == b'Sign ok':
                     sign_data = rcv_data  # Xz why
                     rcv_data = (await self.read_with_prefix())[0]
+                rcv_data = oe_common.fix_block_encoding_errors(rcv_data)
             else:
                 await self.close_connection()
                 return False
