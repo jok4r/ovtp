@@ -84,7 +84,7 @@ class OverEngineServer:
                 return None
 
         async def receive_headers(self):
-            data_type = self.unpad_ov_header(await asyncio.wait_for(self.reader.read(10), timeout=500))
+            data_type = self.unpad_ov_header(await asyncio.wait_for(self.reader.read(10), timeout=5))
             if self.server.debug:
                 print(f'Data type is {data_type}')
 
