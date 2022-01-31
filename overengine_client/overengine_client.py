@@ -146,7 +146,7 @@ class OverEngineClient:
         raise RuntimeError(error)
 
     async def read_with_prefix(self):
-        prefix = (await asyncio.wait_for(self.reader.readline(), timeout=5)).rstrip()
+        prefix = (await asyncio.wait_for(self.reader.readline(), timeout=30)).rstrip()
         pk_data = b''
         msg_len = 0
         if prefix != b'':
