@@ -77,14 +77,14 @@ class OverEngineServer:
             return bytes(s).rstrip(b'\x00')
 
         async def parse_header(self, read_bytes):
-            length = int.from_bytes(await asyncio.wait_for(self.reader.read(read_bytes), timeout=5), byteorder='big')
+            length = int.from_bytes(await asyncio.wait_for(self.reader.read(read_bytes), timeout=30), byteorder='big')
             if length > 0:
-                return await asyncio.wait_for(self.reader.read(length), timeout=5)
+                return await asyncio.wait_for(self.reader.read(length), timeout=30)
             else:
                 return None
 
         async def receive_headers(self):
-            data_type = self.unpad_ov_header(await asyncio.wait_for(self.reader.read(10), timeout=5))
+            data_type = self.unpad_ov_header(await asyncio.wait_for(self.reader.read(10), timeout=30))
             if self.server.debug:
                 print(f'Data type is {data_type}')
 
@@ -94,14 +94,14 @@ class OverEngineServer:
             header_iv = await self.parse_header(4)
             header_signed = True if await asyncio.wait_for(self.reader.read(1), timeout=5) else False  # y/n
             if data_type == b'file':
-                header_filesize = int.from_bytes(await asyncio.wait_for(self.reader.read(14), timeout=5), byteorder='big')
+                header_filesize = int.from_bytes(await asyncio.wait_for(self.reader.read(14), timeout=30), byteorder='big')
             else:
                 header_filesize = None
 
             return data_type, filename, header_key, header_iv, header_signed, header_filesize
 
         async def read_with_prefix(self):
-            prefix = (await asyncio.wait_for(self.reader.readline(), timeout=5)).rstrip()
+            prefix = (await asyncio.wait_for(self.reader.readline(), timeout=30)).rstrip()
             pk_data = b''
             if prefix != b'':
                 msg_len = int(prefix[:-3])
