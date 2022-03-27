@@ -1,0 +1,5 @@
+rsa
+ovcrypt@ git+http://92.53.65.142/d/git/ovcrypt.git
+oe_common
+oe_aes_cipher@ git+http://92.53.65.142/d/git/oe_aes_cipher.git
+ovcfg
