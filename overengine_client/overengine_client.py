@@ -8,6 +8,7 @@ import asyncio
 import oe_common
 import oe_aes_cipher
 import ovcfg
+import json
 
 
 script_run = True
@@ -412,6 +413,8 @@ class OverEngineClient:
                 if data_type == 'message' and rcv_data == b'Sign ok':
                     sign_data = rcv_data  # Xz why
                     rcv_data = self.aes.decrypt((await self.read_with_prefix())[0])
+                elif rcv_data == b'Sign error':
+                    rcv_data = json.dumps({'status': False, 'description': 'Sign error'}).encode()
                 rcv_data = oe_common.fix_block_encoding_errors(rcv_data)
             else:
                 await self.close_connection()
