@@ -393,6 +393,8 @@ class OverEngineClient:
             padded_sign_message = sign_message + b'\x00' * (256 - len(sign_message))
             self.writer.write(padded_sign_message)
             self.writer.write(sign)
+            if self.debug:
+                print('Sended sign (%sB): %s' % (len(sign), sign))
         # self.writer.write_eof()
         await self.writer.drain()
         # print('Data sent!')
