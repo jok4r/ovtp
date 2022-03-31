@@ -299,8 +299,9 @@ class OverEngineServer:
                         if len(part_data) == 256:
                             # print('len is 256, breaking')
                             if part_data.rstrip(b'\x00') == b'ovsign':
-                                received_sign = await asyncio.wait_for(self.reader.read(256), timeout=5)
-                                # print(f'ovsign received: {received_sign}')
+                                received_sign = await asyncio.wait_for(self.reader.readexactly(256), timeout=5)
+                                if self.server.debug:
+                                    print('ovsign received (%sB): %s' % (len(received_sign), received_sign))
                                 if data_type != b'auth_resp':
                                     if ov_sign.get_verification_result(received_sign):
                                         # self.writer.write(aes.encrypt(b'File sign ok'))
