@@ -389,12 +389,16 @@ class OverEngineClient:
         self.writer.write(data)
         # await self.writer.drain()
         if sign:
-            self.writer.write(b'%d%b\n' % (len(sign), prefix_pad))
+            w = b'%d%b\n' % (len(sign), prefix_pad)
+            self.writer.write(w)
+            if self.debug:
+                print('Sended: %s' % w)
             sign_message = b'ovsign'
             padded_sign_message = sign_message + b'\x00' * (256 - len(sign_message))
             self.writer.write(padded_sign_message)
             self.writer.write(sign)
             if self.debug:
+                print('Sended: %s' % padded_sign_message)
                 print('Sended sign (%sB): %s' % (len(sign), sign))
         # self.writer.write_eof()
         await self.writer.drain()
