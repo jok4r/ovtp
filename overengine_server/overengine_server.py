@@ -124,7 +124,7 @@ class OverEngineServer:
                 print(f'[{":".join(str(x) for x in address)}]: Closed')
 
         async def handle_packet(self):
-            global ov_sign
+            ov_sign = None
             # self.reader = reader
             # self.writer = writer
             while True:
@@ -305,9 +305,13 @@ class OverEngineServer:
                                 if data_type != b'auth_resp':
                                     if ov_sign.get_verification_result(received_sign):
                                         # self.writer.write(aes.encrypt(b'File sign ok'))
+                                        if self.server.debug:
+                                            print(f'Sign ok, expected {ov_sign.get_hash()}')
                                         await self.write_with_prefix(self.aes.encrypt(b'Sign ok'))
                                     else:
                                         # self.writer.write(aes.encrypt(b'File sign error'))
+                                        if self.server.debug:
+                                            print(f'Sign error, expected {ov_sign.get_hash()}')
                                         await self.write_with_prefix(self.aes.encrypt(b'Sign error'))
                                 break
                         if data_type == b'file':
