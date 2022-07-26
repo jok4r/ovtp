@@ -24,6 +24,7 @@ cfg = ovcfg.Config(std_config=sc, file='client.json', cfg_dir_name='overengine')
 
 class OverEngineClient:
     def __init__(self, server_ip, server_port=None, debug=False, verbose=False):
+        self.uid = oe_common.get_rnd_string(10)
         self.cr = ovcrypt.OvCrypt()
         self.reader = None
         self.writer = None
