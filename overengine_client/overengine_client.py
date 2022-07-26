@@ -368,6 +368,7 @@ class OverEngineClient:
         rnd_key = oe_common.get_rnd_string(60)
         self.aes = oe_aes_cipher.AESCipher(rnd_key)
         sign = None
+        data_hash = None
         if data_type == 'public_key':
             header = self._get_ov_header(data_type)
         else:
@@ -400,6 +401,7 @@ class OverEngineClient:
             if self.debug:
                 print('Sended: %s' % padded_sign_message)
                 print('Sended sign (%sB): %s' % (len(sign), sign))
+                print(f'Hash: {data_hash}')
         # self.writer.write_eof()
         await self.writer.drain()
         # print('Data sent!')
