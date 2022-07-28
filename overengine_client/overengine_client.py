@@ -147,11 +147,18 @@ class OverEngineClient:
                 error = f"File {filename} does not exists!"
         raise RuntimeError(error)
 
-    async def read_with_prefix(self, timeout=5):
+    async def read_with_prefix(self, timeout=5, retry=0):
         prefix_timeout = 30
         if timeout > prefix_timeout:
             prefix_timeout = timeout
-        prefix = (await asyncio.wait_for(self.reader.readline(), timeout=prefix_timeout)).rstrip()
+        try:
+            prefix = (await asyncio.wait_for(self.reader.readline(), timeout=prefix_timeout)).rstrip()
+        except asyncio.exceptions.TimeoutError:
+            if retry:
+                print(f"Timeout error, but {retry} retry left")
+                return await self.read_with_prefix(timeout=timeout, retry=retry-1)
+            else:
+                raise
         pk_data = b''
         msg_len = 0
         if prefix != b'':
@@ -343,21 +350,21 @@ class OverEngineClient:
             # await self.writer.wait_closed()
             return rcv_data
 
-    async def send_message(self, message, timeout=2):
+    async def send_message(self, message, timeout=2, retry=0):
         await self.check_connection()
-        rcv = await self.send_data(self.server_address, data=message.encode(), timeout=timeout)
+        rcv = await self.send_data(self.server_address, data=message.encode(), timeout=timeout, retry=retry)
         if rcv == 'Access denied':
             self.server_public_key = None
             self.authorized = False
-            return await self.send_message(message, timeout=timeout)
+            return await self.send_message(message, timeout=timeout, retry=retry)
         elif not rcv:
             if self.verbose or self.debug:
                 print(f'Reconnecting to {self.server_address}...')
             # await self.close_connection()
-            return await self.send_message(message, timeout=timeout)
+            return await self.send_message(message, timeout=timeout, retry=retry)
         return rcv
 
-    async def send_data(self, address, data=b'', data_type='message', timeout=2):
+    async def send_data(self, address, data=b'', data_type='message', timeout=2, retry=0):
         if not self.connected:
             await self.connect()
         #self.reader, self.writer = await asyncio.open_connection(
@@ -413,7 +420,7 @@ class OverEngineClient:
             except:
                 print('not aes')
         # rcv_data = await self.reader.read(4096)
-        rcv_data = (await self.read_with_prefix(timeout=timeout))[0]
+        rcv_data = (await self.read_with_prefix(timeout=timeout, retry=retry))[0]
         # print(f'Encoded: {rcv_data}, len: {len(base64.b64decode(rcv_data))}')
         if data_type not in ['public_key', 'auth_req'] and self.server_public_key:
             # print(f'Decrypted: {aes.decrypt(rcv_data)}')
@@ -421,7 +428,7 @@ class OverEngineClient:
                 rcv_data = self.aes.decrypt(rcv_data)
                 if data_type == 'message' and rcv_data == b'Sign ok':
                     sign_data = rcv_data  # Xz why
-                    rcv_data = self.aes.decrypt((await self.read_with_prefix())[0])
+                    rcv_data = self.aes.decrypt((await self.read_with_prefix(timeout=timeout, retry=retry))[0])
                 elif rcv_data == b'Sign error':
                     rcv_data = json.dumps({'status': False, 'description': 'Sign error'}).encode()
                 rcv_data = oe_common.fix_block_encoding_errors(rcv_data)
