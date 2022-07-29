@@ -313,6 +313,7 @@ class OverEngineServer:
                                         if self.server.debug:
                                             print(f'Sign error, expected {ov_sign.get_hash()}')
                                         await self.write_with_prefix(self.aes.encrypt(b'Sign error'))
+                                        return
                                 break
                         if data_type == b'file':
                             if filename[0] != '/':
