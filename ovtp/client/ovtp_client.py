@@ -6,7 +6,7 @@ import ovcrypt
 import datetime
 import asyncio
 import oe_common
-import oe_aes_cipher
+import ov_aes_cipher
 import ovcfg
 import json
 
@@ -16,13 +16,13 @@ sc = {
     'default_server_port': 888,
     'local_ip': '0.0.0.0'
 }
-cfg = ovcfg.Config(std_config=sc, file='client.json', cfg_dir_name='overengine').import_config()
+cfg = ovcfg.Config(std_config=sc, file='client.json', cfg_dir_name='ovtp').import_config()
 # server_port = cfg['server_port']
 # server_ip = cfg['server_address']
 # local_ip = cfg['local_ip']
 
 
-class OverEngineClient:
+class OvtpClient:
     def __init__(self, server_ip, server_port=None, debug=False, verbose=False):
         self.uid = oe_common.get_rnd_string(10).lower()
         self.cr = ovcrypt.OvCrypt()
@@ -207,7 +207,7 @@ class OverEngineClient:
         if not path_to:
             path_to = path_from
         await self.check_connection()
-        self.aes = oe_aes_cipher.AESCipher(key=oe_common.get_rnd_string(60))
+        self.aes = ov_aes_cipher.AESCipher(key=oe_common.get_rnd_string(60))
         self.writer.write(self._get_ov_header(
             'get_file',
             filename=path_from,
@@ -265,7 +265,7 @@ class OverEngineClient:
             path_to = path_from
         await self.check_connection()
         self._validate_input('file', path_from)
-        self.aes = oe_aes_cipher.AESCipher(key=oe_common.get_rnd_string(60))
+        self.aes = ov_aes_cipher.AESCipher(key=oe_common.get_rnd_string(60))
         with open(path_from, 'rb') as f:
             file_size = os.path.getsize(path_from)
             '''if file_size > 1024*1024*500:  # 500 Mb
@@ -373,7 +373,7 @@ class OverEngineClient:
         # sa = []
         # self._validate_input(data_type, filename)
         rnd_key = oe_common.get_rnd_string(60)
-        self.aes = oe_aes_cipher.AESCipher(rnd_key)
+        self.aes = ov_aes_cipher.AESCipher(rnd_key)
         sign = None
         data_hash = None
         if data_type == 'public_key':
