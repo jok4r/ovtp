@@ -9,7 +9,7 @@ import asyncio
 import re
 import ov_aes_cipher
 import oe_common
-from ovtp.server import cfg
+from ovtp.server import cfg, short_key_to_full, get_short_rsa_key
 
 
 class OvtpServer:
@@ -21,22 +21,6 @@ class OvtpServer:
             self.aes = None
             self.cr = ovcrypt.OvCrypt()
 
-        @staticmethod
-        def get_short_rsa_key(key):
-            r = re.search(rb'-----BEGIN RSA PUBLIC KEY-----(.*)-----END RSA PUBLIC KEY-----', key)
-            if r:
-                return r.group(1)
-            else:
-                raise ValueError(f'Bad rsa key: {key}')
-
-        @staticmethod
-        def short_key_to_full(key):
-            return b'%b\n%b\n%b' % (
-                b'-----BEGIN RSA PUBLIC KEY-----',
-                key,
-                b'-----END RSA PUBLIC KEY-----'
-            )
-
         def check_key_is_master(self, key):
             auth_keys_path = os.path.join(cfg['auth_keys_dir'], 'authorized_keys')
             os.makedirs(cfg['auth_keys_dir'], exist_ok=True)
@@ -47,14 +31,14 @@ class OvtpServer:
                     for line in f:
                         if self.server.debug:
                             print(f'found saved rsa key: {line}')
-                        saved_master_keys.append(rsa.PublicKey.load_pkcs1(self.short_key_to_full(line)))
+                        saved_master_keys.append(rsa.PublicKey.load_pkcs1(short_key_to_full(line)))
             if key not in saved_master_keys:
                 master_keys = self.cr.get_master_keys()
                 for m_key in master_keys:
                     if m_key not in saved_master_keys:
                         saved_master_keys.append(m_key)
                 with open(auth_keys_path, 'wb') as f:
-                    f.write(b'\n'.join([self.get_short_rsa_key(rsa.PublicKey.save_pkcs1(k).replace(b'\n', b'')) for k in saved_master_keys]))
+                    f.write(b'\n'.join([get_short_rsa_key(rsa.PublicKey.save_pkcs1(k).replace(b'\n', b'')) for k in saved_master_keys]))
             if key in saved_master_keys:
                 if self.server.debug:
                     print(f'Key found in master keys: {key}')
