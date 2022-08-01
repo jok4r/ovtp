@@ -9,14 +9,7 @@ import asyncio
 import re
 import ov_aes_cipher
 import oe_common
-import ovcfg
-
-sc = {
-    'server_ip': '0.0.0.0',
-    'server_port': 888,
-    'auth_keys_dir': os.path.join('/var/lib/ovtp', 'keys'),
-}
-cfg = ovcfg.Config(std_config=sc, file='server.json', cfg_dir_name='ovtp').import_config()
+from ovtp.server import cfg
 
 
 class OvtpServer:

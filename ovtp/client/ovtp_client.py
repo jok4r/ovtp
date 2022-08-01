@@ -9,17 +9,10 @@ import oe_common
 import ov_aes_cipher
 import ovcfg
 import json
+from ovtp.client import cfg
 
 
 script_run = True
-sc = {
-    'default_server_port': 888,
-    'local_ip': '0.0.0.0'
-}
-cfg = ovcfg.Config(std_config=sc, file='client.json', cfg_dir_name='ovtp').import_config()
-# server_port = cfg['server_port']
-# server_ip = cfg['server_address']
-# local_ip = cfg['local_ip']
 
 
 class OvtpClient:
