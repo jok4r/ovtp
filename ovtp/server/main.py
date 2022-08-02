@@ -20,7 +20,7 @@ def run_server():
     print("Running script %s" % datetime.datetime.now())
     signal.signal(signal.SIGINT, signal_handler)
     print('Press Ctrl+C for exit')
-    over_engine_server = OvtpServer(callback, verbose=False, debug=False)
+    ovtp_server = OvtpServer(callback, verbose=False, debug=False)
     if len(sys.argv) > 2:
         if sys.argv[2] == '--daemon':
             print('Running in daemon mode')
@@ -33,7 +33,7 @@ def run_server():
         main_mode = input('Select mode d, v, dv - debug, verbose: ')
         if main_mode in ['d', 'v', 'dv']:
             if main_mode in ['d', 'dv']:
-                over_engine_server.debug = True
+                ovtp_server.debug = True
             if main_mode in ['v', 'dv']:
-                over_engine_server.verbose = True
-    asyncio.run(over_engine_server.run_server())
+                ovtp_server.verbose = True
+    asyncio.run(ovtp_server.run_server())
