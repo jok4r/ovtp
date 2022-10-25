@@ -1,12 +1,9 @@
 import json
 import os
 import rsa
-import signal
 import pathlib
 import ovcrypt
-import datetime
 import asyncio
-import re
 import ov_aes_cipher
 import oe_common
 from ovtp.server import cfg, short_key_to_full, get_short_rsa_key
