@@ -37,6 +37,10 @@ class OvtpClient:
         )
         self.connected = True
 
+    async def reconnect(self):
+        self.reset()
+        await self.check_connection()
+
     async def close_connection(self):
         if self.verbose:
             print(f'Closing connection with {self.server_address}')
@@ -44,6 +48,9 @@ class OvtpClient:
         await self.writer.drain()
         self.writer.close()
         await self.writer.wait_closed()
+        self.reset()
+
+    def reset(self):
         self.reader = None
         self.writer = None
         self.encrypted_connection = False
@@ -342,7 +349,12 @@ class OvtpClient:
 
     async def send_message(self, message, timeout=2, retry=0):
         await self.check_connection()
-        rcv = await self.send_data(self.server_address, data=message.encode(), timeout=timeout, retry=retry)
+        try:
+            rcv = await self.send_data(self.server_address, data=message.encode(), timeout=timeout, retry=retry)
+        except ConnectionResetError:
+            print('connection error')
+            await self.reconnect()
+            return await self.send_message(message, timeout=timeout, retry=retry)
         if rcv == 'Access denied':
             self.server_public_key = None
             self.authorized = False
