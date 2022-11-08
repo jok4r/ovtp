@@ -15,6 +15,7 @@ class OvtpServer:
             self.server = server
             self.reader = reader
             self.writer = writer
+            self.new_message_timeout = 30
             self.aes = None
             self.cr = ovcrypt.OvCrypt()
 
@@ -35,7 +36,8 @@ class OvtpServer:
                     if m_key not in saved_master_keys:
                         saved_master_keys.append(m_key)
                 with open(auth_keys_path, 'wb') as f:
-                    f.write(b'\n'.join([get_short_rsa_key(rsa.PublicKey.save_pkcs1(k).replace(b'\n', b'')) for k in saved_master_keys]))
+                    f.write(b'\n'.join([get_short_rsa_key(rsa.PublicKey.save_pkcs1(k).replace(b'\n', b'')) for k in
+                                        saved_master_keys]))
             if key in saved_master_keys:
                 if self.server.debug:
                     print(f'Key found in master keys: {key}')
@@ -56,7 +58,15 @@ class OvtpServer:
                 return None
 
         async def receive_headers(self):
-            data_type = self.unpad_ov_header(await asyncio.wait_for(self.reader.read(10), timeout=30))
+            # Waiting for self.headers_timeout, then set up it to standard 30 seconds
+            # This needed to make long timeout between messages, without closing the connection
+            try:
+                data_type = self.unpad_ov_header(
+                    await asyncio.wait_for(self.reader.read(10), timeout=self.new_message_timeout)
+                )
+            except asyncio.exceptions.TimeoutError:
+                return [b''] * 6  # receive_headers have to return 6 values
+            self.new_message_timeout = 30
             if self.server.debug:
                 print(f'Data type is {data_type}')
 
@@ -66,7 +76,8 @@ class OvtpServer:
             header_iv = await self.parse_header(4)
             header_signed = True if await asyncio.wait_for(self.reader.read(1), timeout=5) else False  # y/n
             if data_type == b'file':
-                header_filesize = int.from_bytes(await asyncio.wait_for(self.reader.read(14), timeout=30), byteorder='big')
+                header_filesize = int.from_bytes(await asyncio.wait_for(self.reader.read(14), timeout=30),
+                                                 byteorder='big')
             else:
                 header_filesize = None
 
@@ -89,7 +100,9 @@ class OvtpServer:
             await self.writer.drain()
 
         async def close_connection(self, address):
-            await self.write_with_prefix(self.aes.encrypt('closed'.encode()))
+            # await self.write_with_prefix(self.aes.encrypt('closed'.encode()))
+            self.writer.write_eof()
+            await self.writer.drain()
             self.writer.close()
             await self.writer.wait_closed()
             if self.server.verbose:
@@ -100,12 +113,12 @@ class OvtpServer:
             # self.reader = reader
             # self.writer = writer
             while True:
-                data_type, \
-                filename, \
-                header_key, \
-                header_iv, \
-                header_signed, \
-                header_filesize = await self.receive_headers()
+                (data_type,
+                 filename,
+                 header_key,
+                 header_iv,
+                 header_signed,
+                 header_filesize) = await self.receive_headers()
 
                 read_part_counter = 0
                 received_len = 0
@@ -145,6 +158,7 @@ class OvtpServer:
                     read_part_counter += 1
 
                     if data_type == b'':
+                        print('Data type empty, closing...')
                         await self.close_connection(address)
                         return False
                     elif data_type == b'public_key':
@@ -230,7 +244,7 @@ class OvtpServer:
                                     with open(filename, 'rb') as f:
                                         for chunk in iter(lambda: f.read(4096), b''):
                                             ov_sign.update_hash(chunk)
-                                        #await self.write_with_prefix(self.aes.encrypt(ov_sign.get_hash()))
+                                        # await self.write_with_prefix(self.aes.encrypt(ov_sign.get_hash()))
                                         await self.write_with_prefix(rsa.encrypt(
                                             ov_sign.get_hash(),
                                             self.server.saved_keys[address].key
@@ -333,6 +347,7 @@ class OvtpServer:
                     status, description = self.server.callback(True, dec_data)
                     d = json.dumps({'status': status, 'description': description}).encode()
                     await self.write_with_prefix(self.aes.encrypt(d))
+                    self.new_message_timeout = 15 * 60  # 15 min
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
