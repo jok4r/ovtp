@@ -349,7 +349,7 @@ class OvtpClient:
             return rcv_data
 
     def send_message_sync(self, message, timeout=2, retry=0):
-        self.loop.run_until_complete(
+        return self.loop.run_until_complete(
             self.send_message(message, timeout, retry)
         )
 
