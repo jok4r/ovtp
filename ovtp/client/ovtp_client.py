@@ -30,6 +30,7 @@ class OvtpClient:
         self.authorized = False
         self.connected = False
         self.aes = None
+        self.loop = asyncio.new_event_loop()
 
     async def connect(self):
         self.reader, self.writer = await asyncio.open_connection(
@@ -346,6 +347,11 @@ class OvtpClient:
             # self.writer.close()
             # await self.writer.wait_closed()
             return rcv_data
+
+    def send_message_sync(self, message, timeout=2, retry=0):
+        self.loop.run_until_complete(
+            self.send_message(message, timeout, retry)
+        )
 
     async def send_message(self, message, timeout=2, retry=0):
         await self.check_connection()
