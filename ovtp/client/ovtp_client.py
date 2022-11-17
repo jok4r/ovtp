@@ -43,13 +43,17 @@ class OvtpClient:
         await self.check_connection()
 
     async def close_connection(self):
-        if self.verbose:
-            print(f'Closing connection with {self.server_address}')
-        self.writer.write_eof()
-        await self.writer.drain()
-        self.writer.close()
-        await self.writer.wait_closed()
-        self.reset()
+        try:
+            if self.verbose:
+                print(f'Closing connection with {self.server_address}')
+            self.writer.write_eof()
+            await self.writer.drain()
+            self.writer.close()
+            await self.writer.wait_closed()
+        except OSError as e:
+            print(f'OSError occurred: "{e}"')
+        finally:
+            self.reset()
 
     def reset(self):
         self.reader = None
