@@ -155,8 +155,7 @@ class OvtpServer:
                 file_size_str = oe_common.convert_size(header_filesize) if header_filesize else 'no size'
 
                 if self.reader.at_eof():
-                    if self.server.debug:
-                        print('received eof')
+                    print(f'Received eof from {self.str_ip(address)}')
                     await self.close_connection(address)
                     return False
 
