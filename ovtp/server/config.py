@@ -24,5 +24,6 @@ sc = {
     'server_ip': '0.0.0.0',
     'server_port': 888,
     'auth_keys_dir': os.path.join(config_path, 'auth_keys'),
+    'new_message_timeout': 15,  # 15 min default
 }
 cfg = ovcfg.Config(std_config=sc, file='server.json', cfg_dir_name='ovtp').import_config()

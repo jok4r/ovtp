@@ -60,12 +60,9 @@ class OvtpServer:
         async def receive_headers(self):
             # Waiting for self.headers_timeout, then set up it to standard 30 seconds
             # This needed to make long timeout between messages, without closing the connection
-            try:
-                data_type = self.unpad_ov_header(
-                    await asyncio.wait_for(self.reader.read(10), timeout=self.new_message_timeout)
-                )
-            except asyncio.exceptions.TimeoutError:
-                return [b''] * 6  # receive_headers have to return 6 values
+            data_type = self.unpad_ov_header(
+                await asyncio.wait_for(self.reader.read(10), timeout=self.new_message_timeout)
+            )
             self.new_message_timeout = 30
             if self.server.debug:
                 print(f'Data type is {data_type}')
@@ -100,25 +97,35 @@ class OvtpServer:
             await self.writer.drain()
 
         async def close_connection(self, address):
-            # await self.write_with_prefix(self.aes.encrypt('closed'.encode()))
+            print(f'Closing connection with {self.str_ip(address)}')
             self.writer.write_eof()
             await self.writer.drain()
             self.writer.close()
             await self.writer.wait_closed()
-            if self.server.verbose:
-                print(f'[{":".join(str(x) for x in address)}]: Closed')
+
+        @staticmethod
+        def str_ip(address):
+            if isinstance(address, tuple) and len(address) > 1:
+                return f'{address[0]}:{address[1]}'
+            else:
+                return 'Unknown'
 
         async def handle_packet(self):
             ov_sign = None
-            # self.reader = reader
-            # self.writer = writer
+            address = self.writer.get_extra_info('peername')
+            print(f"Connection from {self.str_ip(address)}")
             while True:
-                (data_type,
-                 filename,
-                 header_key,
-                 header_iv,
-                 header_signed,
-                 header_filesize) = await self.receive_headers()
+                try:
+                    (data_type,
+                     filename,
+                     header_key,
+                     header_iv,
+                     header_signed,
+                     header_filesize) = await self.receive_headers()
+                except (asyncio.exceptions.TimeoutError, ConnectionResetError) as e:
+                    print(f'{type(e).__name__}({e}) occurred')
+                    await self.close_connection(address)
+                    return False
 
                 read_part_counter = 0
                 received_len = 0
@@ -134,7 +141,6 @@ class OvtpServer:
                     )
                 else:
                     self.aes = ov_aes_cipher.AESCipher('pass')
-                address = self.writer.get_extra_info('peername')
 
                 if data_type == b'file' and os.path.isfile(filename):
                     os.remove(filename)
@@ -347,7 +353,7 @@ class OvtpServer:
                     status, description = self.server.callback(True, dec_data)
                     d = json.dumps({'status': status, 'description': description}).encode()
                     await self.write_with_prefix(self.aes.encrypt(d))
-                    self.new_message_timeout = 15 * 60  # 15 min
+                    self.new_message_timeout = cfg['new_message_timeout'] * 60
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
