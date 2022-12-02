@@ -362,9 +362,11 @@ class OvtpClient:
         try:
             rcv = await self.send_data(self.server_address, data=message.encode(), timeout=timeout, retries=retries)
         except ConnectionResetError:
-            print('Connection error, ')
+            if not retries:
+                raise
+            print(f'Connection error, {retries} left')
             await self.reconnect()
-            return await self.send_message(message, timeout=timeout, retries=retries)
+            return await self.send_message(message, timeout=timeout, retries=retries-1)
         if rcv == 'Access denied':
             self.server_public_key = None
             self.authorized = False
