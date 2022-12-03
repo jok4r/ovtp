@@ -160,6 +160,7 @@ class OvtpClient:
                 print(f"Timeout error, but {retries} retries left")
                 return await self.read_with_prefix(timeout=timeout, retries=retries-1)
             else:
+                print(f"Timeout error, no retries left")
                 raise
         pk_data = b''
         msg_len = 0
