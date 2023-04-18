@@ -358,6 +358,16 @@ class OvtpClient:
             self.send_message(message, timeout, retries)
         )
 
+    async def send_add_temp_auth_key(self, key: bytes):
+        await self.check_connection()
+        response = await self.send_data(
+            self.server_address,
+            data=key,
+            data_type='add_temp_auth_key'
+        )
+        print(f"Add temp auth key response: {response}")
+        return response
+
     async def send_message(self, message, timeout=2, retries=0):
         await self.check_connection()
         try:
