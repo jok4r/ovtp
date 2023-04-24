@@ -345,7 +345,7 @@ class OvtpServer:
                         datetime.now() + timedelta(minutes=5),
                         temp_key=True
                     )
-                    send_data = json.dumps({'status': True, 'description': 'Temp key added'}).encode()
+                    send_data = json.dumps({'status': 'OK', 'description': 'Temp key added'}).encode()
                     await self.write_with_prefix(self.aes.encrypt(send_data))
                     print("Temp key added")
                 elif data_type == b'auth_resp':
