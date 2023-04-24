@@ -363,7 +363,7 @@ class OvtpClient:
         response = await self.send_data(
             self.server_address,
             data=key,
-            data_type='add_temp_auth_key'
+            data_type='add_tmp_ak'
         )
         print(f"Add temp auth key response: {response}")
         return response
