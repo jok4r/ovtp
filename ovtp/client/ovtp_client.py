@@ -451,7 +451,7 @@ class OvtpClient:
             # print(f'Decrypted: {aes.decrypt(rcv_data)}')
             if len(rcv_data) > 0:
                 rcv_data = self.aes.decrypt(rcv_data)
-                if data_type == 'message' and rcv_data == b'Sign ok':
+                if data_type in ['message', 'add_tmp_ak'] and rcv_data == b'Sign ok':
                     sign_data = rcv_data  # Xz why
                     rcv_data = self.aes.decrypt((await self.read_with_prefix(timeout=timeout, retries=retries))[0])
                 elif rcv_data == b'Sign error':
