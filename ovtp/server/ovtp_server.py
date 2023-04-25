@@ -354,7 +354,7 @@ class OvtpServer:
                     if self.server.debug:
                         print(f'auth resp is: {data}')
                     if data == self.server.saved_keys[address].verification_string:
-                        status, response = func.check_key(self, self.server.saved_keys[address].key)
+                        status, response = func.check_key(self, self.server.saved_keys[address])
                         if status:
                             # self.writer.write(aes.encrypt('auth successful'.encode()))
                             await self.write_with_prefix(self.aes.encrypt('auth successful'.encode()))
