@@ -339,8 +339,11 @@ class OvtpServer:
                     await self.write_with_prefix(self.aes.encrypt(d))
                     self.new_message_timeout = cfg['new_message_timeout'] * 60
                 elif data_type == b'add_tmp_ak':
-                    temp_key = b''.join(data_parts)
-                    self.server.saved_keys[address] = SavedKey(
+                    data = json.loads((b''.join(data_parts)).decode())
+                    temp_key = data['temp_key'].encode()
+                    remote_address = data['remote_address']
+
+                    self.server.saved_keys[remote_address] = SavedKey(
                         rsa.PublicKey.load_pkcs1(temp_key),
                         datetime.now() + timedelta(minutes=5),
                         temp_key=True

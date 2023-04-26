@@ -6,6 +6,7 @@ import asyncio
 import oe_common
 import ov_aes_cipher
 import json
+import base64
 from ovtp.client import cfg
 
 
@@ -358,11 +359,12 @@ class OvtpClient:
             self.send_message(message, timeout, retries)
         )
 
-    async def send_add_temp_auth_key(self, key: bytes):
+    async def send_add_temp_auth_key(self, key: bytes, remote_address: str):
         await self.check_connection()
+        data = json.dumps({'temp_key': key.decode(), 'remote_address': remote_address}).encode()
         response = await self.send_data(
             self.server_address,
-            data=key,
+            data=data,
             data_type='add_tmp_ak'
         )
         print(f"Add temp auth key response: {response}")
