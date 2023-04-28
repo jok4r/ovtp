@@ -170,8 +170,8 @@ class OvtpServer:
                             print(f'Auth attempt from {address} that is not in saved keys')
                             await self.write_with_prefix(b'Req failed')
                             break
-                        key = self.server.saved_keys[address]
-                        if key.temp_key and key.expire < datetime.now():
+                        key = self.server.temp_keys.get(address[0])
+                        if key and key.expire < datetime.now():
                             print("Key is expired")
                             await self.write_with_prefix(b'Key is expired')
                             break
@@ -343,10 +343,9 @@ class OvtpServer:
                     temp_key = data['temp_key'].encode()
                     remote_address = data['remote_address']
 
-                    self.server.saved_keys[remote_address] = SavedKey(
+                    self.server.temp_keys[remote_address] = SavedKey(
                         rsa.PublicKey.load_pkcs1(temp_key),
-                        datetime.now() + timedelta(minutes=5),
-                        temp_key=True
+                        datetime.now() + timedelta(minutes=5)
                     )
                     send_data = json.dumps({'status': 'OK', 'description': 'Temp key added'}).encode()
                     await self.write_with_prefix(self.aes.encrypt(send_data))
@@ -357,7 +356,7 @@ class OvtpServer:
                     if self.server.debug:
                         print(f'auth resp is: {data}')
                     if data == self.server.saved_keys[address].verification_string:
-                        status, response = func.check_key(self, self.server.saved_keys[address])
+                        status, response = func.check_key(self, self.server.saved_keys[address], address)
                         if status:
                             # self.writer.write(aes.encrypt('auth successful'.encode()))
                             await self.write_with_prefix(self.aes.encrypt('auth successful'.encode()))
@@ -380,6 +379,7 @@ class OvtpServer:
         self.server = None
         self.callback = callback
         self.saved_keys = {}
+        self.temp_keys = {}
         self.verbose = verbose
         self.debug = debug
 

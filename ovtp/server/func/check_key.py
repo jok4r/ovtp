@@ -3,8 +3,8 @@ import rsa
 from ovtp.server import cfg, short_key_to_full, get_short_rsa_key, SavedKey
 
 
-def check_key(self, key: SavedKey):
-    if key.temp_key:
+def check_key(self, key: SavedKey, address):
+    if address[0] in self.server.temp_keys and self.server.temp_keys[address[0]].key == key.key:
         # Temp keys do not need to be checked
         if self.server.verbose:
             print("Temp key not need to be in master keys")
