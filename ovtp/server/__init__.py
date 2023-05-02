@@ -1,3 +1,4 @@
+from .saved_key import SavedKey
 from .keys_conv import short_key_to_full, get_short_rsa_key
 from .config import cfg
 from .ovtp_server import OvtpServer

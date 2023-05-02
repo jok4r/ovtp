@@ -6,6 +6,7 @@ import asyncio
 import oe_common
 import ov_aes_cipher
 import json
+import base64
 from ovtp.client import cfg
 
 
@@ -358,6 +359,17 @@ class OvtpClient:
             self.send_message(message, timeout, retries)
         )
 
+    async def send_add_temp_auth_key(self, key: bytes, remote_address: str):
+        await self.check_connection()
+        data = json.dumps({'temp_key': key.decode(), 'remote_address': remote_address}).encode()
+        response = await self.send_data(
+            self.server_address,
+            data=data,
+            data_type='add_tmp_ak'
+        )
+        print(f"Add temp auth key response: {response}")
+        return response
+
     async def send_message(self, message, timeout=2, retries=0):
         await self.check_connection()
         try:
@@ -441,7 +453,7 @@ class OvtpClient:
             # print(f'Decrypted: {aes.decrypt(rcv_data)}')
             if len(rcv_data) > 0:
                 rcv_data = self.aes.decrypt(rcv_data)
-                if data_type == 'message' and rcv_data == b'Sign ok':
+                if data_type in ['message', 'add_tmp_ak'] and rcv_data == b'Sign ok':
                     sign_data = rcv_data  # Xz why
                     rcv_data = self.aes.decrypt((await self.read_with_prefix(timeout=timeout, retries=retries))[0])
                 elif rcv_data == b'Sign error':

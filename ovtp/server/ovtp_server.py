@@ -6,7 +6,8 @@ import ovcrypt
 import asyncio
 import ov_aes_cipher
 import oe_common
-from ovtp.server import cfg, short_key_to_full, get_short_rsa_key
+from datetime import datetime, timedelta
+from ovtp.server import cfg, SavedKey, func
 
 
 class OvtpServer:
@@ -18,33 +19,6 @@ class OvtpServer:
             self.new_message_timeout = 30
             self.aes = None
             self.cr = ovcrypt.OvCrypt()
-
-        def check_key_is_master(self, key):
-            auth_keys_path = os.path.join(cfg['auth_keys_dir'], 'authorized_keys')
-            os.makedirs(cfg['auth_keys_dir'], exist_ok=True)
-            # oe_common.check_create_dir(auth_keys_path)
-            saved_master_keys = []
-            if os.path.isfile(auth_keys_path):
-                with open(auth_keys_path, 'rb') as f:
-                    for line in f:
-                        if self.server.debug:
-                            print(f'found saved rsa key: {line}')
-                        saved_master_keys.append(rsa.PublicKey.load_pkcs1(short_key_to_full(line)))
-            if key not in saved_master_keys:
-                master_keys = self.cr.get_master_keys()
-                for m_key in master_keys:
-                    if m_key not in saved_master_keys:
-                        saved_master_keys.append(m_key)
-                with open(auth_keys_path, 'wb') as f:
-                    f.write(b'\n'.join([get_short_rsa_key(rsa.PublicKey.save_pkcs1(k).replace(b'\n', b'')) for k in
-                                        saved_master_keys]))
-            if key in saved_master_keys:
-                if self.server.debug:
-                    print(f'Key found in master keys: {key}')
-                return True, True
-            if self.server.verbose:
-                print('Key not found in master keys')
-            return False, 'no_key'
 
         @staticmethod
         def unpad_ov_header(s):
@@ -176,8 +150,10 @@ class OvtpServer:
                             # print(f'Receiving {msg_len} bytes')
                             pk_data = await asyncio.wait_for(self.reader.readexactly(msg_len), timeout=5)
                         # print(f'received: {pk_data}')
-                        self.server.saved_keys[address] = self.cr.Key(rsa.PublicKey.load_pkcs1(
-                            pk_data))
+                        self.server.saved_keys[address] = SavedKey(
+                            rsa.PublicKey.load_pkcs1(pk_data),
+                            datetime.now() + timedelta(minutes=5)
+                        )
                         # self.writer.write(rsa.PublicKey.save_pkcs1(self.cr.public_key))
                         await self.write_with_prefix(rsa.PublicKey.save_pkcs1(self.cr.public_key))
                         break
@@ -190,6 +166,15 @@ class OvtpServer:
                             pk_data = await asyncio.wait_for(self.reader.readexactly(msg_len), timeout=5)
                         if self.server.debug:
                             print(f'pk_data: {pk_data}')
+                        if address not in self.server.saved_keys:
+                            print(f'Auth attempt from {address} that is not in saved keys')
+                            await self.write_with_prefix(b'Req failed')
+                            break
+                        key = self.server.temp_keys.get(address[0])
+                        if key and key.expire < datetime.now():
+                            print("Key is expired")
+                            await self.write_with_prefix(b'Key is expired')
+                            break
                         v_string = oe_common.get_rnd_string(100).encode()
                         self.server.saved_keys[address].verification_string = v_string
                         # self.writer.write(rsa.encrypt(v_string, self.server.saved_keys[address].key))
@@ -353,13 +338,25 @@ class OvtpServer:
                     d = json.dumps({'status': status, 'description': description}).encode()
                     await self.write_with_prefix(self.aes.encrypt(d))
                     self.new_message_timeout = cfg['new_message_timeout'] * 60
+                elif data_type == b'add_tmp_ak':
+                    data = json.loads((b''.join(data_parts)).decode())
+                    temp_key = data['temp_key'].encode()
+                    remote_address = data['remote_address']
+
+                    self.server.temp_keys[remote_address] = SavedKey(
+                        rsa.PublicKey.load_pkcs1(temp_key),
+                        datetime.now() + timedelta(minutes=5)
+                    )
+                    send_data = json.dumps({'status': 'OK', 'description': 'Temp key added'}).encode()
+                    await self.write_with_prefix(self.aes.encrypt(send_data))
+                    print("Temp key added")
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
                     if self.server.debug:
                         print(f'auth resp is: {data}')
                     if data == self.server.saved_keys[address].verification_string:
-                        status, response = self.check_key_is_master(self.server.saved_keys[address].key)
+                        status, response = func.check_key(self, self.server.saved_keys[address], address)
                         if status:
                             # self.writer.write(aes.encrypt('auth successful'.encode()))
                             await self.write_with_prefix(self.aes.encrypt('auth successful'.encode()))
@@ -382,6 +379,7 @@ class OvtpServer:
         self.server = None
         self.callback = callback
         self.saved_keys = {}
+        self.temp_keys = {}
         self.verbose = verbose
         self.debug = debug
 
