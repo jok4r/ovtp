@@ -144,7 +144,7 @@ class OvtpClient:
     def _validate_input(data_type, filename):
         error = 'Unknown error'
         if data_type == 'file':
-            if os.path.isfile(filename):
+            if os.path.isfile(filename) or os.path.islink(filename):
                 return True
             else:
                 error = f"File {filename} does not exists!"
