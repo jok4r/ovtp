@@ -350,6 +350,8 @@ class OvtpServer:
                     send_data = json.dumps({'status': 'OK', 'description': 'Temp key added'}).encode()
                     await self.write_with_prefix(self.aes.encrypt(send_data))
                     print("Temp key added")
+                elif data_type == b'file':
+                    print(f'Received "{filename}"')
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
