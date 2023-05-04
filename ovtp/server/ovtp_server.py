@@ -116,10 +116,12 @@ class OvtpServer:
                 else:
                     self.aes = ov_aes_cipher.AESCipher('pass')
 
-                if data_type == b'file' and os.path.isfile(filename):
-                    os.remove(filename)
-                elif data_type == b'link' and os.path.isfile(filename):
-                    os.remove(filename)
+                if data_type == b'file' and os.path.exists(filename):
+                    print(f'File exists, deleting: "{filename}"')
+                    oe_common.rm(filename)
+                elif data_type == b'link' and os.path.exists(filename):
+                    print(f'Link exists, deleting: "{filename}"')
+                    oe_common.rm(filename)
 
                 if address in self.server.saved_keys:
                     ov_sign = ovcrypt.OvSign(self.server.saved_keys[address].key)
@@ -356,6 +358,7 @@ class OvtpServer:
                     print(f'Received "{filename}"')
                     if not os.path.isfile(filename):
                         print(f'File not exist, creating: "{filename}"')
+                        oe_common.check_create_dir(filename)
                         pathlib.Path(filename).touch()
                 elif data_type == b'link':
                     data = b''.join(data_parts)
