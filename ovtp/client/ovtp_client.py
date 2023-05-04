@@ -264,95 +264,73 @@ class OvtpClient:
                 ov_sign.update_hash(dec_part)
                 f.write(dec_part)
 
-    async def send_file(self, path_from, path_to=None):
+    async def send_file(self, path_from, path_to=None, follow_symlinks=False):
         if not path_to:
             path_to = path_from
         await self.check_connection()
         self._validate_input('file', path_from)
         self.aes = ov_aes_cipher.AESCipher(key=oe_common.get_rnd_string(60))
-        with open(path_from, 'rb') as f:
-            file_size = os.path.getsize(path_from)
-            '''if file_size > 1024*1024*500:  # 500 Mb
-                signed = False
-                sign = None
-            else:
-                signed = True
-                sign = rsa.sign(f.read(), self.cr.private_key, 'SHA-1')
-            f.seek(0)'''
-            signed = True
-            #self.reader, self.writer = await asyncio.open_connection(
-                #self.server_address,
-                #self.server_port
-            #)
-            self.writer.write(self._get_ov_header(
-                'file',
-                filename=path_to,
-                key=rsa.encrypt(self.aes.key, self.server_public_key),
-                iv=rsa.encrypt(self.aes.iv, self.server_public_key),
-                signed=signed,
-                # sign=sign,
-                size=file_size
-            ))
-            # chunk_num = 0
+        file_size = os.path.getsize(path_from)
+        signed = True
+        self.writer.write(self._get_ov_header(
+            'link' if not follow_symlinks and os.path.islink(path_from) else 'file',
+            filename=path_to,
+            key=rsa.encrypt(self.aes.key, self.server_public_key),
+            iv=rsa.encrypt(self.aes.iv, self.server_public_key),
+            signed=signed,
+            size=file_size
+        ))
 
-            dc = oe_common.DinConsole()
-            sc = oe_common.SpeedChecker('bits / second', 4096)
-            ov_sign = ovcrypt.OvSign(self.cr.private_key)
-            prefix_pad = b'\x00' * 3
-            tx_bytes = 0
-            file_size_str = oe_common.convert_size(file_size)
-            for chunk in iter(lambda: f.read(4096), b''):
-                # chunk_num += 1
-                ov_sign.update_hash(chunk)
-                if f.tell() >= file_size:
-                    # print(f'\npadding chunk {chunk_num}')
-                    chunk = self.aes.pad(chunk)
-                    # prefix_pad = b'pad'
-                    prefix_pad = True
-                else:
-                    # prefix_pad = b'\x00' * len(prefix_pad)
-                    prefix_pad = False
-                # self.writer.write(b'%d%b\n' % (len(chunk), prefix_pad))
-                # self.writer.write(aes.encrypt_part(chunk))
-                await self.write_with_prefix(self.aes.encrypt_part(chunk), prefix=prefix_pad)
-                # await self.writer.drain()
-                '''if chunk_num % 1000 == 0:
-                    c_time_new = time.perf_counter()
-                    c_diff = c_time_new - c_time
-                    c_time = c_time_new
-                    network_speed = 4096 * 1000 / c_diff * 8'''
-                tx_bytes = tx_bytes + len(chunk)
-                if self.debug or self.verbose:
-                    dc.update('  Sent %s / %s, %s%%, speed: %s' % (
-                        oe_common.convert_size(tx_bytes),
-                        file_size_str,
-                        round(tx_bytes / file_size * 100),
-                        sc.get_speed()
-                    ))
-            if self.debug or self.verbose:
-                dc.stay()
+        dc = oe_common.DinConsole()
+        sc = oe_common.SpeedChecker('bits / second', 4096)
+        ov_sign = ovcrypt.OvSign(self.cr.private_key)
+        prefix_pad = b'\x00' * 3
+        tx_bytes = 0
+        file_size_str = oe_common.convert_size(file_size)
+
+        if os.path.islink(path_from):
+            link_path = os.readlink(path_from).encode()
+            await self.write_with_prefix(self.aes.encrypt(link_path), prefix=False)
+            ov_sign.update_hash(link_path)
+        else:
+            with open(path_from, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b''):
+                    ov_sign.update_hash(chunk)
+                    if f.tell() >= file_size:
+                        chunk = self.aes.pad(chunk)
+                        prefix_pad = True
+                    else:
+                        prefix_pad = False
+                    await self.write_with_prefix(self.aes.encrypt_part(chunk), prefix=prefix_pad)
+                    tx_bytes = tx_bytes + len(chunk)
+                    if self.debug or self.verbose:
+                        dc.update('  Sent %s / %s, %s%%, speed: %s' % (
+                            oe_common.convert_size(tx_bytes),
+                            file_size_str,
+                            round(tx_bytes / file_size * 100),
+                            sc.get_speed()
+                        ))
+        if self.debug or self.verbose:
+            dc.stay()
+        await self.writer.drain()
+        if self.debug:
+            print("Data sent")
+        if signed:
+            sign = ov_sign.get_sign()
+            prefix = b'\x00' * 3
+            self.writer.write(b'%d%b\n' % (len(sign), prefix))
+            sign_message = b'ovsign'
+            padded_sign_message = sign_message + b'\x00' * (256 - len(sign_message))
+            self.writer.write(padded_sign_message)
+            self.writer.write(sign)
             await self.writer.drain()
             if self.debug:
-                print("Data sent")
-            if signed:
-                sign = ov_sign.get_sign()
-                prefix = b'\x00' * 3
-                self.writer.write(b'%d%b\n' % (len(sign), prefix))
-                sign_message = b'ovsign'
-                padded_sign_message = sign_message + b'\x00' * (256 - len(sign_message))
-                self.writer.write(padded_sign_message)
-                self.writer.write(sign)
-                await self.writer.drain()
-                if self.debug:
-                    print("Sign sent")
-            # self.writer.write_eof()
+                print("Sign sent")
 
-            rcv_data = oe_common.fix_block_encoding_errors(self.aes.decrypt((await self.read_with_prefix())[0]))
-            if self.debug or self.verbose:
-                print(f'Answer: {rcv_data}')
-            # self.writer.close()
-            # await self.writer.wait_closed()
-            return rcv_data
+        rcv_data = oe_common.fix_block_encoding_errors(self.aes.decrypt((await self.read_with_prefix())[0]))
+        if self.debug or self.verbose:
+            print(f'Answer: {rcv_data}')
+        return rcv_data
 
     def send_message_sync(self, message, timeout=2, retries=0):
         return self.loop.run_until_complete(

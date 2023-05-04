@@ -7,6 +7,7 @@ import asyncio
 import ov_aes_cipher
 import oe_common
 from datetime import datetime, timedelta
+from pathlib import Path
 from ovtp.server import cfg, SavedKey, func
 
 
@@ -117,6 +118,8 @@ class OvtpServer:
                     self.aes = ov_aes_cipher.AESCipher('pass')
 
                 if data_type == b'file' and os.path.isfile(filename):
+                    os.remove(filename)
+                elif data_type == b'link' and os.path.isfile(filename):
                     os.remove(filename)
 
                 if address in self.server.saved_keys:
@@ -352,6 +355,15 @@ class OvtpServer:
                     print("Temp key added")
                 elif data_type == b'file':
                     print(f'Received "{filename}"')
+                    if not os.path.isfile(filename):
+                        print(f'File not exist, creating: "{filename}"')
+                elif data_type == b'link':
+                    data = b''.join(data_parts)
+                    del data_parts
+                    print(f'Received link: "{filename}" to "{data.decode()}"')
+                    oe_common.check_create_dir(filename)
+                    os.symlink(data.decode(), filename)
+                    ov_sign.update_hash(data)
                 elif data_type == b'auth_resp':
                     data = b''.join(data_parts)
                     del data_parts
