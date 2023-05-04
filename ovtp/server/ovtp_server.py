@@ -7,7 +7,6 @@ import asyncio
 import ov_aes_cipher
 import oe_common
 from datetime import datetime, timedelta
-from pathlib import Path
 from ovtp.server import cfg, SavedKey, func
 
 
@@ -357,6 +356,7 @@ class OvtpServer:
                     print(f'Received "{filename}"')
                     if not os.path.isfile(filename):
                         print(f'File not exist, creating: "{filename}"')
+                        pathlib.Path(filename).touch()
                 elif data_type == b'link':
                     data = b''.join(data_parts)
                     del data_parts
