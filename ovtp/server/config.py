@@ -10,7 +10,7 @@ if os.name == 'posix':
 
     for config_dir in config_dirs:
         config_path = os.path.join(*config_dir[0], *config_dir[1], 'ovtp')
-        if os.path.isdir(config_path) and os.access(os.path.join(*config_dir[0]), os.W_OK):
+        if os.path.isdir(config_path) or os.access(os.path.join(*config_dir[0]), os.W_OK):
             break
     else:
         raise RuntimeError("Can't create ovcrypt config directory")
